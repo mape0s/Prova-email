@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\ContaService;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 
 class ContaController extends Controller
 {
@@ -11,9 +11,8 @@ class ContaController extends Controller
 
     public function bloquear(string $id)
     {
-        if (Auth::user()->role_id !== 2) {
-            abort(403);
-        }
+        $conta = $this->service->find($id);
+        Gate::authorize('bloquear', $conta);
 
         $this->service->bloquear($id);
 
@@ -22,19 +21,11 @@ class ContaController extends Controller
 
     public function desbloquear(string $id)
     {
-        if (Auth::user()->role_id !== 2) {
-            abort(403);
-        }
+        $conta = $this->service->find($id);
+        Gate::authorize('desbloquear', $conta);
 
         $this->service->desbloquear($id);
 
         return back()->with('status', 'Conta desbloqueada.');
     }
-    use App\Http\Controllers\ContaController;
-
-        Route::middleware('auth')->group(function () {
-        Route::post('/contas/{id}/bloquear', [ContaController::class, 'bloquear'])->name('contas.bloquear');
-        Route::post('/contas/{id}/desbloquear', [ContaController::class, 'desbloquear'])->name('contas.desbloquear');
-    });
-
 }
