@@ -1,0 +1,18 @@
+1) Entre na raiz do projeto:
+cd "C:\Users\mauri\Desktop\projeto-banco\banco"
+
+2) Extraia este ZIP na pasta Downloads e rode o script a partir da pasta extraida.
+
+3) Exemplo PowerShell:
+Expand-Archive -Path "$env:USERPROFILE\Downloads\IFBANK-CLIENTE-SPA-SVELTE-CORRIGIDO.zip" -DestinationPath "$env:TEMP\ifbank-spa-svelte" -Force
+Set-Location "$env:TEMP\ifbank-spa-svelte\IFBANK-CLIENTE-SPA-SVELTE-CORRIGIDO"
+
+4) O script precisa executar na raiz do projeto. Portanto, a forma mais simples e segura e copiar a pasta extraida para o projeto e executar de la:
+Copy-Item .\* "C:\Users\mauri\Desktop\projeto-banco\banco" -Recurse -Force
+Set-Location "C:\Users\mauri\Desktop\projeto-banco\banco"
+.\CONFIGURAR-SPA-SVELTE.ps1
+
+5) Depois abra:
+http://localhost:15000/spa
+
+O resultado esperado e a tela do CLIENTE feita em Svelte. A Blade /spa fica somente como casca com <div id="app"></div>.

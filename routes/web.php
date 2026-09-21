@@ -7,9 +7,12 @@ use App\Http\Controllers\GerenteContaController;
 use App\Http\Controllers\SolicitacaoLimiteController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('svelte-app');
-});
+Route::view('/', 'spa')->name('home');
+
+Route::view('/spa', 'spa')->name('spa');
+Route::get('/admin', function () {
+    return redirect()->route('clientes.index');
+})->middleware('auth')->name('admin');
 
 Route::get('/dashboard', function () {
     return view('dashboard');
@@ -47,3 +50,6 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
+
+
