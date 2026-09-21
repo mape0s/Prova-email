@@ -1,0 +1,139 @@
+COMO USAR ESTA PASTA
+====================
+
+So os arquivos que fizemos juntos, prontos pra copiar direto no seu
+projeto (a pasta "banco"). Nao e um projeto Laravel completo (sem
+vendor/, sem node_modules/).
+
+Ordem: termina a PARTE 1 inteira e testa. So depois disso vai pra
+PARTE 2 (API). Nao precisa fazer as duas juntas.
+
+
+PARTE 1 - PAINEL WEB (Gerente Geral e Gerente de Conta)
+=========================================================
+
+PASSO 1 - Copiar por cima, sem medo
+--------------------------------------
+Copie cada arquivo desta pasta para o mesmo caminho dentro do seu
+projeto (pode sobrescrever, mesmo que ja existam de antes):
+
+  app/Models/Role.php
+  app/Models/Resource.php
+  app/Models/Permission.php
+  app/Models/Conta.php
+  app/Models/SolicitacaoLimite.php          (novo)
+  app/Repositories/BaseRepository.php       (atualizado - ganhou o remove())
+  app/Repositories/ContaRepository.php
+  app/Repositories/GerenteContaRepository.php   (novo)
+  app/Repositories/ClienteRepository.php        (novo)
+  app/Repositories/SolicitacaoLimiteRepository.php  (novo)
+  app/Services/BaseService.php              (atualizado - ganhou o remove())
+  app/Services/ContaService.php
+  app/Services/GerenteContaService.php      (novo)
+  app/Services/ClienteService.php           (novo)
+  app/Services/SolicitacaoLimiteService.php (novo)
+  app/Http/Controllers/ContaController.php
+  app/Http/Controllers/GerenteContaController.php   (novo)
+  app/Http/Controllers/ClienteController.php        (novo)
+  app/Http/Controllers/SolicitacaoLimiteController.php  (novo)
+  resources/views/template/main.blade.php   (atualizado - menu por papel)
+  resources/views/dashboard.blade.php
+  resources/views/gerentes/index.blade.php  (novo)
+  resources/views/gerentes/create.blade.php (novo)
+  resources/views/gerentes/edit.blade.php   (novo)
+  resources/views/clientes/index.blade.php  (novo)
+  resources/views/clientes/create.blade.php (novo)
+  resources/views/clientes/edit.blade.php   (novo)
+  resources/views/solicitacoes/index.blade.php (novo)
+
+PASSO 2 - Migration nova
+----------------------------
+Este arquivo e novo de verdade, pode copiar direto para dentro de
+database/migrations/ (nao existe conflito, e uma tabela nova):
+
+  database/migrations/2026_09_20_000001_create_solicitacoes_limite_table.php
+
+PASSO 3 - routes/COLAR-EM-web.php
+-------------------------------------
+NAO copie esse arquivo para dentro da pasta routes/. Abra ele, copie
+o codigo de dentro, e cole no FINAL do seu routes/web.php de verdade
+(depois do require __DIR__.'/auth.php';). Se voce ja tinha colado as
+rotas de bloquear/desbloquear antes, apague elas e cole este bloco
+novo no lugar (ele ja inclui as antigas).
+
+PASSO 4 - Rodar
+-------------------
+Dentro da pasta do projeto:
+
+  docker compose exec app php artisan migrate
+  docker compose exec app php artisan view:clear
+
+(e so "migrate", sem ":fresh" - assim nao apaga o que voce ja tem)
+
+PASSO 5 - Testar
+-------------------
+Abra http://localhost:15000/dashboard
+
+  gerente.geral@banco.test / senha123
+     -> deve ver "Gerentes de Conta" e "Solicitacoes" no menu
+
+  gerente.conta@banco.test / senha123
+     -> deve ver "Clientes" e "Solicitacoes" no menu, e os botoes
+        Bloquear/Desbloquear no dashboard
+
+
+PARTE 2 - API PARA O CLIENTE (Sanctum) - FAZER DEPOIS
+========================================================
+
+So faca isso depois que a Parte 1 estiver funcionando 100%. A API
+ainda nao vai funcionar so com estes arquivos - precisa instalar o
+Sanctum antes.
+
+PASSO 1 - Instalar o Sanctum
+--------------------------------
+  docker compose exec app php artisan install:api
+  docker compose exec app php artisan migrate
+
+PASSO 2 - Editar app/Models/User.php a mao (nao sobrescrever)
+------------------------------------------------------------------
+Adicione a trait (se ainda nao tiver):
+
+  use Laravel\Sanctum\HasApiTokens;
+
+  class User extends Authenticatable
+  {
+      use HasApiTokens, HasFactory, Notifiable;
+
+E adicione este metodo dentro da classe (se ainda nao tiver):
+
+  public function conta()
+  {
+      return $this->hasOne(Conta::class);
+  }
+
+PASSO 3 - Copiar os arquivos da API
+---------------------------------------
+  app/Http/Controllers/Api/AuthController.php
+  routes/api.php   (este pode copiar direto, e arquivo novo)
+
+PASSO 4 - Testar
+-------------------
+  docker compose exec app php artisan tinker --execute="\App\Models\User::where('email','cliente@banco.test')->first()"
+
+Se aparecer o usuario cliente de teste, testa o login pela API (fora
+do Docker, no PowerShell mesmo, se tiver curl instalado, ou depois
+direto do Svelte):
+
+  curl -X POST http://localhost:15000/api/login -H "Accept: application/json" -H "Content-Type: application/json" -d "{\"email\":\"cliente@banco.test\",\"password\":\"senha123\",\"device_name\":\"teste\"}"
+
+Deve voltar um token. Com esse token, testa o saldo:
+
+  curl http://localhost:15000/api/saldo -H "Accept: application/json" -H "Authorization: Bearer SEU_TOKEN_AQUI"
+
+
+O QUE AINDA FALTA (fora deste pacote)
+==========================================
+- Projeto Svelte do cliente (tela de login consumindo a API acima)
+- Extrato por periodo, PIX, aplicacoes/resgates (CDB, CDI, Poupanca)
+- Laravel Auditing (logs de auditoria) - precisa instalar o pacote
+  composer require owen-it/laravel-auditing antes de mexer nisso

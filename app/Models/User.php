@@ -36,7 +36,6 @@ class User extends Authenticatable
     }
     public function conta()
     {
-        return $this->hasOne(Conta::class);
-    }   
+    return $this->hasOne(Conta::class);
+}   
 }
-
