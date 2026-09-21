@@ -1,10 +1,14 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\AuditoriaController;
+use App\Http\Controllers\ClienteController;
+use App\Http\Controllers\ContaController;
+use App\Http\Controllers\GerenteContaController;
+use App\Http\Controllers\SolicitacaoLimiteController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return redirect()->route('login');
+    return view('svelte-app');
 });
 
 Route::get('/dashboard', function () {
@@ -12,20 +16,10 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
+    Route::get('/profile', [\App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [\App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [\App\Http\Controllers\ProfileController::class, 'destroy'])->name('profile.destroy');
 
-require __DIR__.'/auth.php';
-
-use App\Http\Controllers\ClienteController;
-use App\Http\Controllers\ContaController;
-use App\Http\Controllers\GerenteContaController;
-use App\Http\Controllers\SolicitacaoLimiteController;
-use App\Http\Controllers\AuditoriaController;
-
-Route::middleware('auth')->group(function () {
     Route::post('/contas/{id}/bloquear', [ContaController::class, 'bloquear'])->name('contas.bloquear');
     Route::post('/contas/{id}/desbloquear', [ContaController::class, 'desbloquear'])->name('contas.desbloquear');
 
@@ -50,5 +44,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/solicitacoes/{id}/reprovar', [SolicitacaoLimiteController::class, 'reprovar'])->name('solicitacoes.reprovar');
 
     Route::get('/auditoria', [AuditoriaController::class, 'index'])->name('auditoria.index');
-
 });
+
+require __DIR__.'/auth.php';

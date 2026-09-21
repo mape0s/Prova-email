@@ -17,6 +17,7 @@ class SolicitacaoLimiteController extends Controller
         }
 
         $solicitacoes = $this->service->all();
+        $solicitacoes->load('conta.cliente', 'aprovadoPor');
 
         return view('solicitacoes.index', compact('solicitacoes'));
     }
@@ -28,11 +29,16 @@ class SolicitacaoLimiteController extends Controller
         }
 
         $data = $request->validate([
-            'conta_id' => 'required|exists:contas,id',
             'valor_solicitado' => 'required|numeric|min:0.01',
         ]);
 
-        $this->service->solicitar($data['conta_id'], $data['valor_solicitado']);
+        $conta = Auth::user()->conta;
+
+        if (! $conta) {
+            abort(403);
+        }
+
+        $this->service->solicitar($conta->id, $data['valor_solicitado']);
 
         return back()->with('status', 'Solicitacao enviada.');
     }

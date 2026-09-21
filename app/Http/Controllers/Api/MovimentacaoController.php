@@ -16,7 +16,9 @@ class MovimentacaoController extends Controller
         $conta = $request->user()->conta;
 
         if ($conta->status === 'bloqueada') {
-            return response()->json(['message' => 'Conta bloqueada, nao e possivel gerar extrato.'], 422);
+            return response()->json([
+                'message' => 'Conta bloqueada, nao e possivel gerar extrato.',
+            ], 422);
         }
 
         $movimentacoes = $this->service->extrato(
@@ -31,6 +33,7 @@ class MovimentacaoController extends Controller
     public function pix(Request $request)
     {
         $data = $request->validate([
+            'email' => 'required|email',
             'valor' => 'required|numeric|min:0.01',
             'descricao' => 'nullable|string|max:150',
         ]);
@@ -38,7 +41,12 @@ class MovimentacaoController extends Controller
         $conta = $request->user()->conta;
 
         try {
-            $this->service->pix($conta, $data['valor'], $data['descricao'] ?? '');
+            $this->service->pix(
+                $conta,
+                $data['email'],
+                (float) $data['valor'],
+                $data['descricao'] ?? ''
+            );
         } catch (Exception $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
@@ -56,7 +64,7 @@ class MovimentacaoController extends Controller
         $conta = $request->user()->conta;
 
         try {
-            $this->service->aplicar($conta, $data['tipo'], $data['valor']);
+            $this->service->aplicar($conta, $data['tipo'], (float) $data['valor']);
         } catch (Exception $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
@@ -74,7 +82,7 @@ class MovimentacaoController extends Controller
         $conta = $request->user()->conta;
 
         try {
-            $this->service->resgatar($conta, $data['tipo'], $data['valor']);
+            $this->service->resgatar($conta, $data['tipo'], (float) $data['valor']);
         } catch (Exception $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }

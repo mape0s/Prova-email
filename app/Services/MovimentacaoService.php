@@ -3,9 +3,11 @@
 namespace App\Services;
 
 use App\Models\Conta;
+use App\Models\User;
 use App\Repositories\ContaRepository;
 use App\Repositories\MovimentacaoRepository;
 use Exception;
+use Illuminate\Support\Facades\DB;
 
 class MovimentacaoService extends BaseService
 {
@@ -24,25 +26,64 @@ class MovimentacaoService extends BaseService
         return $this->repository->porConta($contaId, $inicio, $fim);
     }
 
-    public function pix(Conta $conta, float $valor, string $descricao = '')
+    public function pix(Conta $conta, string $emailDestino, float $valor, string $descricao = '')
     {
         if ($conta->status === 'bloqueada') {
             throw new Exception('Conta bloqueada, nao e possivel movimentar.');
+        }
+
+        $destinatario = User::query()
+            ->where('email', $emailDestino)
+            ->where('role_id', 3)
+            ->first();
+
+        if (! $destinatario || ! $destinatario->conta) {
+            throw new Exception('Nao existe cliente com este e-mail.');
+        }
+
+        $contaDestino = $destinatario->conta;
+
+        if ($contaDestino->id === $conta->id) {
+            throw new Exception('Nao e possivel enviar PIX para a propria conta.');
+        }
+
+        if ($contaDestino->status === 'bloqueada') {
+            throw new Exception('A conta do destinatario esta bloqueada.');
         }
 
         if ($conta->saldo < $valor) {
             throw new Exception('Saldo insuficiente.');
         }
 
-        $this->contaRepository->update(['saldo' => $conta->saldo - $valor], $conta->id);
+        DB::transaction(function () use ($conta, $contaDestino, $valor, $descricao) {
+            $descricaoSaida = $descricao !== ''
+                ? $descricao
+                : 'Pix enviado';
 
-        $this->repository->store([
-            'conta_id' => $conta->id,
-            'tipo' => 'pix',
-            'valor' => $valor,
-            'natureza' => 'saida',
-            'descricao' => $descricao !== '' ? $descricao : 'Pix enviado',
-        ]);
+            $this->contaRepository->update([
+                'saldo' => $conta->saldo - $valor,
+            ], $conta->id);
+
+            $this->contaRepository->update([
+                'saldo' => $contaDestino->saldo + $valor,
+            ], $contaDestino->id);
+
+            $this->repository->store([
+                'conta_id' => $conta->id,
+                'tipo' => 'pix',
+                'valor' => $valor,
+                'natureza' => 'saida',
+                'descricao' => $descricaoSaida . ' para ' . $contaDestino->cliente->email,
+            ]);
+
+            $this->repository->store([
+                'conta_id' => $contaDestino->id,
+                'tipo' => 'pix',
+                'valor' => $valor,
+                'natureza' => 'entrada',
+                'descricao' => 'Pix recebido de ' . $conta->cliente->email,
+            ]);
+        });
     }
 
     public function aplicar(Conta $conta, string $tipo, float $valor)

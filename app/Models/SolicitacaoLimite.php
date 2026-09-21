@@ -1,11 +1,10 @@
 <?php
 
-use Database\Factories\UserFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Hidden;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use OwenIt\Auditing\Contracts\Auditable;
+use OwenIt\Auditing\Auditable as AuditableTrait;
 
 class SolicitacaoLimite extends Model implements Auditable
 {
@@ -13,10 +12,20 @@ class SolicitacaoLimite extends Model implements Auditable
 
     protected $table = 'solicitacoes_limite';
 
-    protected $fillable = ['conta_id', 'valor_solicitado', 'status', 'aprovado_por'];
+    protected $fillable = [
+        'conta_id',
+        'valor_solicitado',
+        'status',
+        'aprovado_por',
+    ];
 
     public function conta()
     {
         return $this->belongsTo(Conta::class);
+    }
+
+    public function aprovadoPor()
+    {
+        return $this->belongsTo(User::class, 'aprovado_por');
     }
 }

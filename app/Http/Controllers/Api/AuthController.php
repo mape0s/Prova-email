@@ -27,6 +27,7 @@ class AuthController extends Controller
 
         if ($user->role_id !== 3) {
             Auth::logout();
+
             throw ValidationException::withMessages([
                 'email' => ['Acesso exclusivo para clientes.'],
             ]);
@@ -42,6 +43,12 @@ class AuthController extends Controller
     {
         $conta = $request->user()->conta;
 
+        if (! $conta) {
+            return response()->json([
+                'message' => 'Conta nao encontrada.'
+            ], 404);
+        }
+
         return response()->json([
             'saldo' => $conta->saldo,
             'limite' => $conta->limite,
@@ -54,8 +61,14 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        $token = $request->user()->currentAccessToken();
 
-        return response()->json(['message' => 'Logout ok.']);
+        if ($token) {
+            $token->delete();
+        }
+
+        return response()->json([
+            'message' => 'Logout ok.'
+        ]);
     }
 }

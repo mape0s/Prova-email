@@ -30,7 +30,13 @@ class SolicitacaoLimiteService extends BaseService
     {
         $solicitacao = $this->repository->find($id);
 
-        $this->contaRepository->update(['limite' => $solicitacao->valor_solicitado], $solicitacao->conta_id);
+        if (! $solicitacao || $solicitacao->status !== 'pendente') {
+            abort(404);
+        }
+
+        $this->contaRepository->update([
+            'limite' => $solicitacao->valor_solicitado
+        ], $solicitacao->conta_id);
 
         return $this->repository->update([
             'status' => 'aprovado',
@@ -40,6 +46,12 @@ class SolicitacaoLimiteService extends BaseService
 
     public function reprovar(int|string $id, int|string $gerenteGeralId)
     {
+        $solicitacao = $this->repository->find($id);
+
+        if (! $solicitacao || $solicitacao->status !== 'pendente') {
+            abort(404);
+        }
+
         return $this->repository->update([
             'status' => 'reprovado',
             'aprovado_por' => $gerenteGeralId,
