@@ -15,8 +15,12 @@ Route::get('/admin', function () {
 })->middleware('auth')->name('admin');
 
 Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+    return redirect()->route('admin');
+})->middleware('auth')->name('dashboard');
+
+Route::get('/admin', function () {
+    return redirect()->route('clientes.index');
+})->middleware('auth')->name('admin');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [\App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
@@ -50,6 +54,7 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
 
 
 
