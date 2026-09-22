@@ -1,0 +1,37 @@
+IFBANK - PATCH DE SEPARAÇÃO CLIENTE / ADMIN
+
+Problema corrigido:
+- http://localhost:15000 = painel interno Laravel/Breeze
+- http://localhost:5173 = SPA Svelte do cliente
+- /login não é mais interceptado por RedirectIfAuthenticated.
+- após login de gerente, o destino é sempre /admin, nunca /clientes por redirect()->intended().
+- /admin/login é a URL explícita do painel.
+- Vite 5173 encaminha /api/* para Laravel 15000.
+- a rota /admin duplicada é removida.
+
+ARQUIVOS:
+- index.html
+- vite.config.js
+- resources/js/client.js
+- resources/js/App.svelte
+- routes/web.php
+- routes/auth.php
+- app/Http/Controllers/Auth/AuthenticatedSessionController.php
+
+COMO APLICAR:
+1. Extraia o ZIP na raiz do projeto e sobrescreva os arquivos.
+2. No PowerShell:
+   docker compose exec app php artisan optimize:clear
+3. Na raiz do projeto, rode o Vite:
+   npm install
+   npm run dev -- --host 0.0.0.0
+4. Abra o cliente:
+   http://localhost:5173/
+5. Abra o admin:
+   http://localhost:15000/admin/login
+
+IMPORTANTE:
+- Não rode migrate:fresh.
+- Não apague banco.
+- O cliente usa Sanctum/token.
+- O gerente usa Breeze/session.

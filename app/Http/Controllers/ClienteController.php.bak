@@ -16,7 +16,7 @@ class ClienteController extends Controller
 
     private function checarAcesso()
     {
-        if (!in_array((int) Auth::user()->role_id, [1, 2], true)) {
+        if (Auth::user()->role_id !== 2) {
             abort(403);
         }
     }

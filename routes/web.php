@@ -7,9 +7,17 @@ use App\Http\Controllers\GerenteContaController;
 use App\Http\Controllers\SolicitacaoLimiteController;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'spa')->name('home');
+/*
+|--------------------------------------------------------------------------
+| Separação das duas interfaces
+|--------------------------------------------------------------------------
+| 15000 = área interna/admin (Laravel + Breeze Session)
+| 5173  = SPA do cliente (Svelte + API/Sanctum)
+*/
 
-Route::view('/spa', 'spa')->name('spa');
+Route::redirect('/', '/admin/login')->name('home');
+
+Route::redirect('/spa', 'http://localhost:5173')->name('spa');
 
 Route::get('/admin', function () {
     return redirect()->route('clientes.index');
@@ -51,7 +59,3 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
-
-
-
-
