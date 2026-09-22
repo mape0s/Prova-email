@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Route;
 Route::view('/', 'spa')->name('home');
 
 Route::view('/spa', 'spa')->name('spa');
+
 Route::get('/admin', function () {
     return redirect()->route('clientes.index');
 })->middleware('auth')->name('admin');
@@ -17,10 +18,6 @@ Route::get('/admin', function () {
 Route::get('/dashboard', function () {
     return redirect()->route('admin');
 })->middleware('auth')->name('dashboard');
-
-Route::get('/admin', function () {
-    return redirect()->route('clientes.index');
-})->middleware('auth')->name('admin');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [\App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
