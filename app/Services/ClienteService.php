@@ -2,12 +2,10 @@
 
 namespace App\Services;
 
-use App\Mail\CredenciaisAcessoMail;
 use App\Repositories\ClienteRepository;
 use App\Repositories\ContaRepository;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
 
 class ClienteService extends BaseService
 {
@@ -19,6 +17,23 @@ class ClienteService extends BaseService
     protected function getRepository(): mixed
     {
         return $this->repository;
+    }
+
+    public function allForGerente(int $gerenteId)
+    {
+        return $this->contaRepository
+            ->clientesDoGerente($gerenteId)
+            ->map(fn ($conta) => $conta->cliente)
+            ->filter();
+    }
+
+    public function findForGerente(int|string $id, int $gerenteId)
+    {
+        $conta = $this->contaRepository
+            ->clientesDoGerente($gerenteId)
+            ->firstWhere('user_id', (int) $id);
+
+        return $conta?->cliente;
     }
 
     public function store(array $data)
@@ -37,14 +52,6 @@ class ClienteService extends BaseService
             'saldo' => $data['saldo'] ?? 0,
             'limite' => $data['limite'] ?? 0,
         ]);
-
-        Mail::to($cliente->email)->send(
-            new CredenciaisAcessoMail(
-                $cliente,
-                $data['password'],
-                'Cliente'
-            )
-        );
 
         return $cliente;
     }

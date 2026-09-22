@@ -16,7 +16,7 @@ class ClienteController extends Controller
 
     private function checarAcesso()
     {
-        if (!in_array((int) Auth::user()->role_id, [1, 2], true)) {
+        if (Auth::user()->role_id !== 2) {
             abort(403);
         }
     }
@@ -24,13 +24,15 @@ class ClienteController extends Controller
     public function index()
     {
         $this->checarAcesso();
-        $clientes = $this->service->all();
+        $clientes = $this->service->allForGerente(Auth::id());
+
         return view('clientes.index', compact('clientes'));
     }
 
     public function create()
     {
         $this->checarAcesso();
+
         return view('clientes.create');
     }
 
@@ -54,13 +56,23 @@ class ClienteController extends Controller
     public function edit(string $id)
     {
         $this->checarAcesso();
-        $cliente = $this->service->find($id);
+        $cliente = $this->service->findForGerente($id, Auth::id());
+
+        if (! $cliente) {
+            abort(404);
+        }
+
         return view('clientes.edit', compact('cliente'));
     }
 
     public function update(Request $request, string $id)
     {
         $this->checarAcesso();
+
+        $cliente = $this->service->findForGerente($id, Auth::id());
+        if (! $cliente) {
+            abort(404);
+        }
 
         $data = $request->validate([
             'name' => 'required|max:150',
@@ -76,7 +88,14 @@ class ClienteController extends Controller
     public function destroy(string $id)
     {
         $this->checarAcesso();
+
+        $cliente = $this->service->findForGerente($id, Auth::id());
+        if (! $cliente) {
+            abort(404);
+        }
+
         $this->service->remove($id);
+
         return redirect()->route('clientes.index')->with('status', 'Cliente removido.');
     }
 
@@ -84,9 +103,12 @@ class ClienteController extends Controller
     {
         $this->checarAcesso();
 
-        $cliente = $this->service->find($id);
-        $conta = $cliente->conta;
+        $cliente = $this->service->findForGerente($id, Auth::id());
+        if (! $cliente) {
+            abort(404);
+        }
 
+        $conta = $cliente->conta;
         $movimentacoes = $this->movimentacaoService->extrato($conta->id);
 
         return view('clientes.extrato', compact('cliente', 'conta', 'movimentacoes'));

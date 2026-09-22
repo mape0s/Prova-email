@@ -17,6 +17,21 @@ class SolicitacaoLimiteService extends BaseService
         return $this->repository;
     }
 
+    public function paraGerente(int $gerenteId)
+    {
+        return $this->repository->listByGerente($gerenteId);
+    }
+
+    public function clientesDoGerente(int $gerenteId)
+    {
+        return $this->contaRepository->clientesDoGerente($gerenteId);
+    }
+
+    public function contaDoGerente(int|string $contaId, int $gerenteId)
+    {
+        return $this->contaRepository->contaDoGerente($contaId, $gerenteId);
+    }
+
     public function solicitar(int|string $contaId, float $valor)
     {
         return $this->repository->store([

@@ -12,14 +12,20 @@ class SolicitacaoLimiteController extends Controller
 
     public function index()
     {
-        if (! in_array(Auth::user()->role_id, [1, 2])) {
+        $role = (int) Auth::user()->role_id;
+
+        if ($role === 1) {
+            $solicitacoes = $this->service->all();
+            $solicitacoes->load('conta.cliente', 'conta.gerenteConta', 'aprovadoPor');
+            $clientes = collect();
+        } elseif ($role === 2) {
+            $solicitacoes = $this->service->paraGerente(Auth::id());
+            $clientes = $this->service->clientesDoGerente(Auth::id());
+        } else {
             abort(403);
         }
 
-        $solicitacoes = $this->service->all();
-        $solicitacoes->load('conta.cliente', 'aprovadoPor');
-
-        return view('solicitacoes.index', compact('solicitacoes'));
+        return view('solicitacoes.index', compact('solicitacoes', 'clientes'));
     }
 
     public function store(Request $request)
@@ -29,10 +35,14 @@ class SolicitacaoLimiteController extends Controller
         }
 
         $data = $request->validate([
+            'conta_id' => 'required|integer',
             'valor_solicitado' => 'required|numeric|min:0.01',
         ]);
 
-        $conta = Auth::user()->conta;
+        $conta = $this->service->contaDoGerente(
+            $data['conta_id'],
+            Auth::id()
+        );
 
         if (! $conta) {
             abort(403);
@@ -40,7 +50,7 @@ class SolicitacaoLimiteController extends Controller
 
         $this->service->solicitar($conta->id, $data['valor_solicitado']);
 
-        return back()->with('status', 'Solicitacao enviada.');
+        return back()->with('status', 'Solicitacao enviada para aprovacao do Gerente Geral.');
     }
 
     public function aprovar(string $id)

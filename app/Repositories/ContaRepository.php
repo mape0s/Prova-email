@@ -12,4 +12,21 @@ class ContaRepository extends BaseRepository
     {
         return $this->model;
     }
+
+    public function clientesDoGerente(int $gerenteId)
+    {
+        return $this->getModel()
+            ->with('cliente')
+            ->where('gerente_conta_id', $gerenteId)
+            ->orderBy('id')
+            ->get();
+    }
+
+    public function contaDoGerente(int|string $contaId, int $gerenteId): ?Conta
+    {
+        return $this->getModel()
+            ->where('id', $contaId)
+            ->where('gerente_conta_id', $gerenteId)
+            ->first();
+    }
 }
