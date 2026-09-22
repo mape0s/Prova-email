@@ -7,14 +7,15 @@
     let token = localStorage.getItem(TOKEN_KEY);
     let user = JSON.parse(localStorage.getItem(USER_KEY) || 'null');
 
+    let email = '';
+    let password = '';
+
     let loading = false;
     let loadingData = false;
+    let loadingStatement = false;
     let error = '';
     let success = '';
     let activeTab = 'inicio';
-
-    let email = '';
-    let password = '';
 
     let saldo = {
         saldo: 0,
@@ -26,6 +27,8 @@
     };
 
     let extrato = [];
+    let inicio = '';
+    let fim = '';
 
     let pix = { email: '', valor: '', descricao: '' };
     let investimento = { tipo: 'cdb', valor: '' };
@@ -77,6 +80,7 @@
             const validation = data?.errors
                 ? Object.values(data.errors).flat().join(' ')
                 : '';
+
             throw new Error(
                 validation || data?.message || 'Não foi possível concluir a operação.'
             );
@@ -115,6 +119,35 @@
         }
     }
 
+    async function loadStatement() {
+        if (!token || saldo.status === 'bloqueada') {
+            extrato = [];
+            return;
+        }
+
+        loadingStatement = true;
+        error = '';
+
+        try {
+            const params = new URLSearchParams();
+
+            if (inicio) params.set('inicio', inicio);
+            if (fim) params.set('fim', fim);
+
+            const query = params.toString();
+            const statement = await api(`/api/extrato${query ? `?${query}` : ''}`);
+
+            extrato = Array.isArray(statement)
+                ? statement
+                : statement?.data || [];
+        } catch (e) {
+            error = e.message;
+            extrato = [];
+        } finally {
+            loadingStatement = false;
+        }
+    }
+
     async function loadData() {
         if (!token) return;
 
@@ -122,22 +155,32 @@
         error = '';
 
         try {
-            const [me, account, statement] = await Promise.all([
+            const [me, account] = await Promise.all([
                 api('/api/user'),
                 api('/api/saldo'),
-                api('/api/extrato'),
             ]);
 
             user = me;
             saldo = account;
-            extrato = Array.isArray(statement) ? statement : statement?.data || [];
 
             localStorage.setItem(USER_KEY, JSON.stringify(user));
+
+            if (saldo.status === 'bloqueada') {
+                extrato = [];
+                activeTab = 'inicio';
+            } else {
+                await loadStatement();
+            }
         } catch (e) {
             error = e.message;
         } finally {
             loadingData = false;
         }
+    }
+
+    async function consultarExtrato() {
+        if (saldo.status === 'bloqueada') return;
+        await loadStatement();
     }
 
     async function submitPix() {
@@ -156,6 +199,7 @@
 
             pix = { email: '', valor: '', descricao: '' };
             success = 'PIX realizado com sucesso.';
+
             await loadData();
             activeTab = 'extrato';
         } catch (e) {
@@ -178,6 +222,7 @@
 
             investimento.valor = '';
             success = 'Aplicação realizada com sucesso.';
+
             await loadData();
             activeTab = 'investimentos';
         } catch (e) {
@@ -200,6 +245,7 @@
 
             resgate.valor = '';
             success = 'Resgate realizado com sucesso.';
+
             await loadData();
             activeTab = 'investimentos';
         } catch (e) {
@@ -290,9 +336,12 @@
         <div class="layout">
             <aside class="sidebar">
                 <button class:active={activeTab === 'inicio'} on:click={() => activeTab = 'inicio'}>Início</button>
-                <button class:active={activeTab === 'pix'} on:click={() => activeTab = 'pix'}>PIX</button>
-                <button class:active={activeTab === 'extrato'} on:click={() => activeTab = 'extrato'}>Extrato</button>
-                <button class:active={activeTab === 'investimentos'} on:click={() => activeTab = 'investimentos'}>Investimentos</button>
+
+                {#if saldo.status !== 'bloqueada'}
+                    <button class:active={activeTab === 'pix'} on:click={() => activeTab = 'pix'}>PIX</button>
+                    <button class:active={activeTab === 'extrato'} on:click={() => activeTab = 'extrato'}>Extrato</button>
+                    <button class:active={activeTab === 'investimentos'} on:click={() => activeTab = 'investimentos'}>Investimentos</button>
+                {/if}
             </aside>
 
             <main class="content">
@@ -311,6 +360,7 @@
                             <h1>Olá, {user?.name?.split(' ')[0] || 'cliente'}.</h1>
                             <p class="muted">Aqui está um resumo da sua conta.</p>
                         </div>
+
                         <button class="ghost" on:click={loadData} disabled={loadingData}>
                             {loadingData ? 'Atualizando...' : 'Atualizar'}
                         </button>
@@ -326,7 +376,11 @@
                         <article class="card">
                             <span>Status da conta</span>
                             <strong class:blocked={saldo.status === 'bloqueada'}>{saldo.status}</strong>
-                            <small>Conta do cliente autenticado</small>
+                            <small>
+                                {saldo.status === 'bloqueada'
+                                    ? 'Conta bloqueada: somente consulta de saldo.'
+                                    : 'Conta do cliente autenticado'}
+                            </small>
                         </article>
 
                         <article class="card">
@@ -336,37 +390,47 @@
                         </article>
                     </div>
 
-                    <section class="panel">
-                        <div class="panel-title">
-                            <h2>Últimas movimentações</h2>
-                            <button class="link" on:click={() => activeTab = 'extrato'}>Ver extrato</button>
-                        </div>
-
-                        {#if extrato.length}
-                            <div class="table-wrap">
-                                <table>
-                                    <thead>
-                                        <tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Valor</th></tr>
-                                    </thead>
-                                    <tbody>
-                                        {#each extrato.slice(0, 5) as item}
-                                            <tr>
-                                                <td>{date(item.created_at)}</td>
-                                                <td>{item.tipo}</td>
-                                                <td>{item.descricao}</td>
-                                                <td class:income={item.natureza === 'entrada'} class="money">
-                                                    {item.natureza === 'entrada' ? '+' : '-'} {money(item.valor)}
-                                                </td>
-                                            </tr>
-                                        {/each}
-                                    </tbody>
-                                </table>
+                    {#if saldo.status === 'bloqueada'}
+                        <section class="panel">
+                            <div class="alert error">
+                                Sua conta está bloqueada. O saldo continua disponível para consulta,
+                                mas extrato, PIX e investimentos ficam indisponíveis.
                             </div>
-                        {:else}
-                            <div class="empty">Nenhuma movimentação encontrada.</div>
-                        {/if}
-                    </section>
-                {:else if activeTab === 'pix'}
+                        </section>
+                    {:else}
+                        <section class="panel">
+                            <div class="panel-title">
+                                <h2>Últimas movimentações</h2>
+                                <button class="link" on:click={() => activeTab = 'extrato'}>Ver extrato</button>
+                            </div>
+
+                            {#if extrato.length}
+                                <div class="table-wrap">
+                                    <table>
+                                        <thead>
+                                            <tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Valor</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            {#each extrato.slice(0, 5) as item}
+                                                <tr>
+                                                    <td>{date(item.created_at)}</td>
+                                                    <td>{item.tipo}</td>
+                                                    <td>{item.descricao}</td>
+                                                    <td class:income={item.natureza === 'entrada'} class="money">
+                                                        {item.natureza === 'entrada' ? '+' : '-'} {money(item.valor)}
+                                                    </td>
+                                                </tr>
+                                            {/each}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {:else}
+                                <div class="empty">Nenhuma movimentação encontrada.</div>
+                            {/if}
+                        </section>
+                    {/if}
+
+                {:else if activeTab === 'pix' && saldo.status !== 'bloqueada'}
                     <section class="page-heading">
                         <div>
                             <p class="eyebrow">Transferência</p>
@@ -398,15 +462,37 @@
                             </div>
                         </form>
                     </section>
-                {:else if activeTab === 'extrato'}
+
+                {:else if activeTab === 'extrato' && saldo.status !== 'bloqueada'}
                     <section class="page-heading">
                         <div>
                             <p class="eyebrow">Movimentações</p>
                             <h1>Extrato</h1>
+                            <p class="muted">Consulte as movimentações por período.</p>
                         </div>
-                        <button class="ghost" on:click={loadData} disabled={loadingData}>
-                            {loadingData ? 'Atualizando...' : 'Atualizar'}
-                        </button>
+                    </section>
+
+                    <section class="panel form-panel">
+                        <form on:submit|preventDefault={consultarExtrato}>
+                            <div class="two-col">
+                                <label>
+                                    Data inicial
+                                    <input bind:value={inicio} type="date">
+                                </label>
+
+                                <label>
+                                    Data final
+                                    <input bind:value={fim} type="date">
+                                </label>
+                            </div>
+
+                            <div class="form-footer">
+                                <span>Deixe as datas vazias para consultar todo o extrato.</span>
+                                <button class="primary" disabled={loadingStatement}>
+                                    {loadingStatement ? 'Consultando...' : 'Consultar'}
+                                </button>
+                            </div>
+                        </form>
                     </section>
 
                     <section class="panel">
@@ -432,10 +518,11 @@
                                 </table>
                             </div>
                         {:else}
-                            <div class="empty">Nenhuma movimentação encontrada.</div>
+                            <div class="empty">Nenhuma movimentação encontrada para o período informado.</div>
                         {/if}
                     </section>
-                {:else if activeTab === 'investimentos'}
+
+                {:else if activeTab === 'investimentos' && saldo.status !== 'bloqueada'}
                     <section class="page-heading">
                         <div>
                             <p class="eyebrow">Patrimônio</p>
@@ -462,10 +549,12 @@
                                         <option value="poupanca">Poupança</option>
                                     </select>
                                 </label>
+
                                 <label>
                                     Valor
                                     <input bind:value={investimento.valor} type="number" min="0.01" step="0.01" required>
                                 </label>
+
                                 <button class="primary" disabled={saldo.status === 'bloqueada'}>Aplicar</button>
                             </form>
                         </section>
@@ -481,10 +570,12 @@
                                         <option value="poupanca">Poupança</option>
                                     </select>
                                 </label>
+
                                 <label>
                                     Valor
                                     <input bind:value={resgate.valor} type="number" min="0.01" step="0.01" required>
                                 </label>
+
                                 <button class="primary" disabled={saldo.status === 'bloqueada'}>Resgatar</button>
                             </form>
                         </section>
